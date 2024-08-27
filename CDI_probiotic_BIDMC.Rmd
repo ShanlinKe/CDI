@@ -1,0 +1,1712 @@
+---
+title: "CDI_probiotic_BIDMC"
+author: "Shanlin Ke"
+date: "11/16/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+
+
+############### Fig 1 ###############
+```{r}
+rm(list=ls())
+library(ggplot2)
+library(cowplot)
+library(RColorBrewer)
+library(webr)
+library(dplyr)
+library(readxl)
+library(vegan)
+library(ape)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(cowplot)
+library(reshape2) 
+library(ggExtra)
+setwd("/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/MAG")
+
+Res1 <- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Data/CDI_MAG_info.xlsx"
+dat2 <- read_excel(path = Res1,sheet = "quality")
+
+dat2$Phyla <- factor(dat2$Phyla, levels=unique(dat2$Phyla))
+scaleFUN1 <- function(x) sprintf("%.2f", x)
+
+p1 <- ggplot(data=dat2, aes(x = Completeness,y=Contamination,color=Phyla))
+p1 <- p1 + geom_point(aes(size = Genome_size),alpha=1, size=1.8)
+p1 <- p1 + geom_smooth(size=1.3,color="#4c6389",method="loess")
+p1 <- p1 + theme_bw()+theme(panel.grid=element_blank(),panel.border=element_blank(),axis.line=element_line(size=1,colour="black"))
+p1 <- p1 + theme(axis.text.x=element_text(colour="black",family="Arial",size=6), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=8,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5))
+p1 <- p1 + scale_colour_manual(values=c("#666666","#D95F02","#33A02C","#1F78B4","#CAB2D6","#E31A1C","#B2DF8A","#6A3D9A","#FB9A99","#A6CEE3","#B15928","#FDBF6F","#9E1862","#FF7F00","#E6AB02","#FFFF99","#7FCDBB"))
+p1 <- p1 + ylab("Contamination (%)")
+p1 <- p1 + xlab("Completeness (%)")
+#p1 <- p1 + theme(legend.position="none")
+
+gg1 <- ggMarginal(p1, type = "density", fill = "#2c7fb8", alpha = .2)
+
+All1 <- plot_grid(gg1,labels=c('d'),label_size = 10,ncol=1)
+
+save_plot("CDI_MAG_fig1.pdf", All1, base_width = 9,base_height =8)
+
+```
+
+
+
+
+
+
+```{r}
+###### Alpha diversity caculation ###########
+rm(list=ls())
+library(vegan)
+library(readxl)
+library(ggpubr)
+
+setwd("/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/Alpha")
+
+Res1 <- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Data/CDI_MAG_diversity.xlsx"
+dat1 <- read_excel(path = Res1,sheet = "Abundance")
+
+df1<-dat1[,-c(1:2)]
+Shannon<-diversity(df1,"shannon") #计算shannon.wiener指数
+Simpson<-diversity(df1,"simpson") #
+Invsimp<-diversity(df1, "inv")
+H<-diversity(df1)
+S <- specnumber(df1)
+J <- H/log(S)
+ds<-cbind(Shannon,Simpson)
+dss<-cbind(ds,Invsimp)
+dsss<-cbind(dss,J)
+dssss<-cbind(dsss,S)
+
+data<-cbind(dat1[,c(1:2)],dssss)
+
+
+write.table(data,"CDI_MAG_alpha.txt",sep="\t",row.names = F)
+
+```
+
+############### Fig 2 ###############
+```{r}
+rm(list=ls())
+library(ggplot2)
+library(cowplot)
+library(RColorBrewer)
+library(webr)
+library(dplyr)
+library(readxl)
+library(vegan)
+library(ape)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(cowplot)
+library(reshape2) 
+library(ggExtra)
+library(extrafont)
+library(ggpubr)
+setwd("/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/MAG")
+
+Res1 <- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Data/CDI_MAG_info.xlsx"
+dat1 <- read_excel(path = Res1,sheet = "basic")
+
+p01 <- PieDonut(dat1, aes(Cohort, Label, count=Sample), title = "Datasets",donutLabelSize = 3, r1=0.8)
+p02 <- PieDonut(dat1, aes(Cohort, Label, count=MAG), title = "MAG distribution",donutLabelSize = 3, r1=0.8)
+
+######################################## quality ###########
+dat2 <- read_excel(path = Res1,sheet = "quality")
+dat2$Phyla <- factor(dat2$Phyla, levels=unique(dat2$Phyla))
+scaleFUN1 <- function(x) sprintf("%.2f", x)
+
+Res2 <- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Data/CDI_MAG_diversity.xlsx"
+dat3 <- read_excel(path = Res2,sheet = "richness")
+dat4 <- read_excel(path = Res2,sheet = "alpha")
+dat5 <- read_excel(path = Res2,sheet = "Abundance")
+
+dat3<-dat3[c(1:40),]
+dat3$Species <- factor(dat3$Species, levels=unique(dat3$Species))
+dat3$Phyla <- factor(dat3$Phyla, levels=unique(dat3$Phyla))
+
+p2 <- ggplot(data=dat2, aes(x = MAG,y=Completeness))
+p2 <- p2 + geom_violin(trim=FALSE,fill="#A6CEE3")
+p2 <- p2 + stat_boxplot(geom ='errorbar', width = 0.15)
+p2 <- p2 + geom_boxplot(size=0.3,width=0.15,outlier.shape= NA,fill="white")
+p2 <- p2 + theme(plot.background=element_blank(),panel.background=element_blank())
+p2 <- p2 + theme_bw()
+p2 <- p2 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_text(colour="black",family="Arial",size=6,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"), #设置y轴标题的字体属性
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                            size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                             size=6),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p2 <- p2 + scale_fill_brewer(palette = "Paired")
+p2 <- p2 + scale_color_brewer(palette = "Paired")
+p2 <- p2 + ylab("Completeness (%)")
+p2 <- p2 + xlab(NULL)
+p2 <- p2 + theme(legend.position="none")
+
+
+p3 <- ggplot(data=dat2, aes(x = MAG,y=Contamination))
+p3 <- p3 + geom_violin(trim=FALSE,fill="#1F78B4")
+p3 <- p3 + stat_boxplot(geom ='errorbar', width = 0.15)
+p3 <- p3 + geom_boxplot(size=0.3,width=0.15,outlier.shape= NA,fill="white")
+p3 <- p3 + theme(plot.background=element_blank(),panel.background=element_blank())
+p3 <- p3 + theme_bw()
+p3 <- p3 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"), #设置y轴标题的字体属性
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5))
+
+p3 <- p3 + scale_fill_brewer(palette = "Paired")
+p3 <- p3 + scale_color_brewer(palette = "Paired")
+p3 <- p3 + ylab("Contamination (%)")
+p3 <- p3 + xlab(NULL)
+p3 <- p3 + theme(legend.position="none")
+
+
+p4 <- ggplot(data=dat2, aes(x = MAG,y=Genome_size))
+p4 <- p4 + geom_violin(trim=FALSE,fill="#B2DF8A")
+p4 <- p4 + stat_boxplot(geom ='errorbar', width = 0.15)
+p4 <- p4 + geom_boxplot(size=0.3,width=0.15,outlier.shape= NA,fill="white")
+p4 <- p4 + theme(plot.background=element_blank(),panel.background=element_blank())
+p4 <- p4 + theme_bw()
+p4 <- p4 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"), #设置y轴标题的字体属性
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5))
+
+p4 <- p4 + scale_fill_brewer(palette = "Paired")
+p4 <- p4 + scale_color_brewer(palette = "Paired")
+p4 <- p4 + ylab("Genome_size (Mbp)")
+p4 <- p4 + xlab(NULL)
+p4 <- p4 + theme(legend.position="none")
+
+p5 <- ggplot(data=dat2, aes(x = MAG,y=N50))
+p5 <- p5 + geom_violin(trim=FALSE,fill="#B2DF8A")
+p5 <- p5 + stat_boxplot(geom ='errorbar', width = 0.15)
+p5 <- p5 + geom_boxplot(size=0.3,width=0.15,outlier.shape= NA,fill="white")
+p5 <- p5 + theme(plot.background=element_blank(),panel.background=element_blank())
+p5 <- p5 + theme_bw()
+p5 <- p5 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=6,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"), #设置y轴标题的字体属性
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5))
+
+p5 <- p5 + scale_fill_brewer(palette = "Paired")
+p5 <- p5 + scale_color_brewer(palette = "Paired")
+p5 <- p5 + ylab("N50 (Kbp)")
+p5 <- p5 + xlab(NULL)
+p5 <- p5 + theme(legend.position="none")
+
+p6 <- ggplot(dat3, aes(x=Species, y=Strains, fill=Phyla))
+p6 <- p6 + geom_bar(stat="identity")
+p6 <- p6 + scale_fill_brewer(palette="Paired")
+p6 <- p6 + theme(plot.background=element_blank(),panel.background=element_blank())
+p6 <- p6 + theme_bw()
+p6 <- p6 + theme(axis.text.x=element_text(angle = 60, hjust = 1,colour="black",family="Arial",size=8,face="italic"), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_text(colour="black",family="Arial",size=8,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                   axis.title.x=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                            size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.direction="horizontal",
+                   plot.title = element_text(family="Arial",size = 12,face="plain"),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p6 <- p6 + theme(legend.position = c(0.84,0.8),legend.box.background = element_rect(color="black", size=0.5))
+p6 <- p6 + ylab("Number of nrMAGs")
+p6 <- p6 + xlab(NULL)
+
+
+lists <- split(dat4, dat4$Index)
+dd1<-rbind(lists[[5]],lists[[6]])
+dd2<-rbind(lists[[4]],lists[[9]],lists[[8]])
+dd3<-rbind(lists[[3]],lists[[7]],lists[[1]],lists[[2]])
+
+dd1$Index <- factor(dd1$Index, levels=unique(dd1$Index))
+dd2$Index <- factor(dd2$Index, levels=unique(dd2$Index))
+dd3$Index <- factor(dd3$Index, levels=unique(dd3$Index))
+
+comparison1 <- list(c("HMP_1", "HMP_2"))
+comparison2 <- list(c("Donor", "PreFMT"),c("Donor", "PostFMT"),c("PreFMT","PostFMT"))
+comparison3 <- list(c("CON", "NCD"),c("CON", "ASC"),c("CON","CDI"),c("NCD","ASC"),c("NCD","CDI"),c("ASC","CDI"))
+
+scaleFUN1 <- function(x) sprintf("%.1f", x)
+
+#Panel a
+p01 <- ggplot(data=dd1, aes(x = Index,y=S,fill=Index))
+p01 <- p01 + geom_violin(trim=FALSE)
+p01 <- p01 + stat_boxplot(geom ='errorbar', width = 0.15)
+p01 <- p01 + geom_boxplot(size=0.3,width=0.12,outlier.shape= NA,fill="white")
+p01 <- p01 + theme(plot.background=element_blank(),panel.background=element_blank())
+p01 <- p01 + theme_bw()
+p01 <- p01 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p01 <- p01 + scale_fill_brewer(palette = "Paired")
+p01 <- p01 + scale_color_brewer(palette = "Paired")
+p01 <- p01 + ylab("Number of nrMAGs")
+p01 <- p01 + xlab(NULL)
+p01 <- p01 + theme(legend.position="none")
+p01 <- p01 + stat_compare_means(comparisons = comparison1,label = "p.format",size=2.5,method = "wilcox.test")
+p01 <- p01 + ggtitle("HMP")
+
+
+p02 <- ggplot(data=dd2, aes(x = Index,y=S,fill=Index))
+p02 <- p02 + geom_violin(trim=FALSE)
+p02 <- p02 + stat_boxplot(geom ='errorbar', width = 0.15)
+p02 <- p02 + geom_boxplot(size=0.3,width=0.15,outlier.shape= NA,fill="white")
+p02 <- p02 + theme(plot.background=element_blank(),panel.background=element_blank())
+p02 <- p02 + theme_bw()
+p02 <- p02 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p02 <- p02 + scale_fill_brewer(palette = "Paired")
+p02 <- p02 + scale_color_brewer(palette = "Paired")
+p02 <- p02 + ylab("Number of nrMAGs")
+p02 <- p02 + xlab(NULL)
+p02 <- p02 + theme(legend.position="none")
+p02 <- p02 + stat_compare_means(comparisons = comparison2,label = "p.format",size=2.5,method = "wilcox.test")
+p02 <- p02 + ggtitle("Verma et al.")
+
+p03 <- ggplot(data=dd3, aes(x = Index,y=S,fill=Index))
+p03 <- p03 + geom_violin(trim=FALSE)
+p03 <- p03 + stat_boxplot(geom ='errorbar', width = 0.15)
+p03 <- p03 + geom_boxplot(size=0.3,width=0.18,outlier.shape= NA,fill="white")
+p03 <- p03 + theme(plot.background=element_blank(),panel.background=element_blank())
+p03 <- p03 + theme_bw()
+p03 <- p03 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p03 <- p03 + scale_fill_brewer(palette = "Paired")
+p03 <- p03 + scale_color_brewer(palette = "Paired")
+p03 <- p03 + ylab("Number of nrMAGs")
+p03 <- p03 + xlab(NULL)
+p03 <- p03 + theme(legend.position="none")
+p03 <- p03 + stat_compare_means(comparisons = comparison3,label = "p.format",size=2.5,method = "wilcox.test")
+p03 <- p03 + ggtitle("CDI")
+
+
+######PCOA
+list2 <- split(dat5, dat5$Index)
+
+tax1<-rbind(list2[[5]],list2[[6]])
+tax2<-rbind(list2[[4]],list2[[9]],list2[[8]])
+tax3<-rbind(list2[[3]],list2[[7]],list2[[1]],list2[[2]])
+
+tax1$Index <- factor(tax1$Index, levels=unique(tax1$Index))
+tax2$Index <- factor(tax2$Index, levels=unique(tax2$Index))
+tax3$Index <- factor(tax3$Index, levels=unique(tax3$Index))
+
+
+cdi<- tax3[tax3$Index == "CDI", ]
+set.seed(123)  # For reproducibility
+cdi1 <- cdi[sample(nrow(cdi), size = 14), ]
+cdi2 <- cdi[sample(nrow(cdi), size = 17), ]
+cdi3 <- cdi[sample(nrow(cdi), size = 26), ]
+
+other_groups <- tax3[tax3$Index != "CDI", ]
+tax3 <- rbind(cdi3, other_groups)
+
+
+dff1<-tax1[,-c(1:2)]
+dff2<-tax2[,-c(1:2)]
+dff3<-tax3[,-c(1:2)]
+
+mat1 <- decostand(dff1, "rclr")
+mat2 <- decostand(dff2, "rclr")
+mat3 <- decostand(dff3, "rclr")
+
+#AD
+Aitchison1<-vegdist(mat1,method="euclidean") 
+Aitchison2<-vegdist(mat2,method="euclidean") 
+Aitchison3<-vegdist(mat3,method="euclidean") 
+
+
+matrix1<-as.matrix(Aitchison1)
+matrix2<-as.matrix(Aitchison2)
+matrix3<-as.matrix(Aitchison3)
+
+dis1 <-as.dist(matrix1)
+dis2 <-as.dist(matrix2)
+dis3 <-as.dist(matrix3)
+
+#species
+set.seed(123)
+permanova <- adonis( dis1~ Index,
+                     data = tax1, permutations=9999)
+summary(permanova)
+permanova$aov.tab 
+
+
+#pathway
+set.seed(123)
+permanova <- adonis( dis2~ Index,
+                     data = tax2, permutations=9999)
+summary(permanova)
+permanova$aov.tab 
+
+set.seed(123)
+permanova <- adonis( dis3~ Index,
+                     data = tax3, permutations=9999)
+summary(permanova)
+permanova$aov.tab 
+
+
+PCoA1 <- pcoa(Aitchison1,correction = "none",rn=NULL)#
+PCoA2 <- pcoa(Aitchison2,correction = "none",rn=NULL)#
+PCoA3 <- pcoa(Aitchison3,correction = "none",rn=NULL)#
+
+pc1 = as.data.frame(PCoA1$vectors)
+pc2 = as.data.frame(PCoA2$vectors)
+pc3 = as.data.frame(PCoA3$vectors)
+
+PCoA.result1 <- cbind(tax1[,c(1,2)],pc1[,c(1,2)])
+PCoA.result2 <- cbind(tax2[,c(1,2)],pc2[,c(1,2)])
+PCoA.result3 <- cbind(tax3[,c(1,2)],pc3[,c(1,2)])
+
+names(PCoA.result1) <- c("ID","Index","PCo1","PCo2")
+names(PCoA.result2) <- c("ID","Index","PCo1","PCo2")
+names(PCoA.result3) <- c("ID","Index","PCo1","PCo2")
+
+b1 <-PCoA1$values[,"Relative_eig"]
+b2 <-PCoA2$values[,"Relative_eig"]
+b3 <-PCoA3$values[,"Relative_eig"]
+
+pro11 = as.numeric(sprintf("%.3f",b1[1]))*100
+pro12 = as.numeric(sprintf("%.3f",b1[2]))*100
+pro21 = as.numeric(sprintf("%.3f",b2[1]))*100
+pro22 = as.numeric(sprintf("%.3f",b2[2]))*100
+pro31 = as.numeric(sprintf("%.3f",b3[1]))*100
+pro32 = as.numeric(sprintf("%.3f",b3[2]))*100
+
+xlab1=paste("PCo1(",pro11,"%)",sep="") 
+ylab1=paste("PCo2(",pro12,"%)",sep="")
+xlab2=paste("PCo1(",pro21,"%)",sep="") 
+ylab2=paste("PCo2(",pro22,"%)",sep="")
+xlab3=paste("PCo1(",pro31,"%)",sep="") 
+ylab3=paste("PCo2(",pro32,"%)",sep="")
+
+PCoA.result1$Index <- factor(PCoA.result1$Index, levels=unique(PCoA.result1$Index))
+PCoA.result2$Index <- factor(PCoA.result2$Index, levels=unique(PCoA.result2$Index))
+PCoA.result3$Index <- factor(PCoA.result3$Index, levels=unique(PCoA.result3$Index))
+
+p04<- ggplot(PCoA.result1, aes(PCo1, PCo2, group = Index, color = Index))
+p04 <- p04 + geom_point(size=1.4)
+#p1 <- p1 + geom_text(aes(label=ID),hjust=0, vjust=0,size=0.4,colour="black")
+p04 <- p04 + theme_bw()
+#geom_text(aes(label=ID),hjust=0, vjust=0,size=1.6)+
+#p1 <- p1 + stat_ellipse(level = 0.95, show.legend = F,linetype = 2)
+p04 <- p04 + xlab(xlab1)+ylab(ylab1)+theme(panel.grid=element_blank())
+#scale_color_viridis(discrete = TRUE, option = "D")+
+#scale_fill_viridis(discrete = TRUE) +
+p04 <- p04 + scale_color_brewer(palette="Paired")
+p04 <- p04 + theme(legend.key.size = unit(0.3, "cm"))
+p04 <- p04 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"),
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                 legend.position="none",
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5),
+                 plot.title=element_text(size=12))
+p04 <- p04 + theme(legend.position = c(0.87,0.1),legend.box.background = element_rect(color="black", size=0.5))
+p04 <- p04 + annotate("text", x=1, y=15, label= "PERMANOVA: p value=0.351")
+
+p05<- ggplot(PCoA.result2, aes(PCo1, PCo2, group = Index, color = Index))
+p05 <- p05 + geom_point(size=1.4)
+#p1 <- p1 + geom_text(aes(label=ID),hjust=0, vjust=0,size=0.4,colour="black")
+p05 <- p05 + theme_bw()
+#geom_text(aes(label=ID),hjust=0, vjust=0,size=1.6)+
+#p1 <- p1 + stat_ellipse(level = 0.95, show.legend = F,linetype = 2)
+p05 <- p05 + xlab(xlab2)+ylab(ylab2)+theme(panel.grid=element_blank())
+#scale_color_viridis(discrete = TRUE, option = "D")+
+#scale_fill_viridis(discrete = TRUE) +
+p05 <- p05 + scale_color_brewer(palette="Paired")
+p05 <- p05 + theme(legend.key.size = unit(0.3, "cm"))
+p05 <- p05 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"),
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                 legend.position="none",
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5),
+                 plot.title=element_text(size=12))
+p05 <- p05 + theme(legend.position = c(0.14,0.13),legend.box.background = element_rect(color="black", size=0.5))
+p05 <- p05 + annotate("text", x=1, y=15, label= "PERMANOVA: p value=0.0001")
+
+
+p06<- ggplot(PCoA.result3, aes(PCo1, PCo2, group = Index, color = Index))
+p06 <- p06 + geom_point(size=1.4)
+#p1 <- p1 + geom_text(aes(label=ID),hjust=0, vjust=0,size=0.4,colour="black")
+p06 <- p06 + theme_bw()
+#geom_text(aes(label=ID),hjust=0, vjust=0,size=1.6)+
+#p1 <- p1 + stat_ellipse(level = 0.95, show.legend = F,linetype = 2)
+p06 <- p06 + xlab(xlab3)+ylab(ylab3)+theme(panel.grid=element_blank())
+#scale_color_viridis(discrete = TRUE, option = "D")+
+#scale_fill_viridis(discrete = TRUE) +
+p06 <- p06 + scale_color_brewer(palette="Paired")
+p06 <- p06 + theme(legend.key.size = unit(0.3, "cm"))
+p06 <- p06 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"),
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                 legend.position="none",
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5),
+                 plot.title=element_text(size=12))
+p06 <- p06 + theme(legend.position = c(0.89,0.86),legend.box.background = element_rect(color="black", size=0.5))
+p06 <- p06 + annotate("text", x=1, y=15, label= "PERMANOVA: p value=0.0001")
+
+All1 <- plot_grid(p2,p2,labels=c('a','b'),label_size = 12,ncol=2,label_fontfamily="Arial")
+All2 <- plot_grid(p2,p3,p4,p5,labels=c('c','d','e','f'),label_size = 12,ncol=4,label_fontfamily="Arial")
+All3 <- plot_grid(All1,All2,labels=c('',''),label_size = 12,ncol=2,label_fontfamily="Arial",rel_widths = c(0.45,0.55))
+All4 <- plot_grid(p6,labels=c('g'),label_size = 12,ncol=1,label_fontfamily="Arial")
+All5 <- plot_grid(p01,p02,p03,p04,p05,p06,labels=c('h','i','j','k','l','m','n'),label_size = 12,ncol=3,rel_widths = c(0.8,0.8,0.8,0.8),label_fontfamily="Arial")
+
+All6 <- plot_grid(All3,All4,All5,labels=c(' '),label_size = 12,ncol=1, rel_heights=c(0.35,0.7,1))
+
+save_plot("CDI_MAG_fig2.pdf", All6, base_width = 10.5,base_height =14)
+
+
+
+```
+
+
+
+
+################## Fig 3 #############################
+
+```{r}
+rm(list=ls())
+library(ggplot2)
+library(cowplot)
+library(RColorBrewer)
+library(webr)
+library(dplyr)
+library(readxl)
+library(vegan)
+library(ape)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(cowplot)
+library(reshape2) 
+library(ggExtra)
+library(extrafont)
+library(ggpubr)
+library(ggvenn)
+library(viridis)
+setwd("/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/FMT")
+
+Res1 <- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Data/CDI_MAG_FMT.xlsx"
+dat1 <- read_excel(path = Res1,sheet = "Abundance")
+
+
+df1<-dat1[,-c(1:3)]
+mat1 <- decostand(df1, "rclr")
+#BC
+Aitchison1<-vegdist(mat1,method="euclidean") 
+
+PCoA1 <- pcoa(Aitchison1,correction = "none",rn=NULL)#
+pc1 = as.data.frame(PCoA1$vectors)
+PCoA.result1 <- cbind(dat1[,c(1:3)],pc1[,c(1,2)])
+
+names(PCoA.result1) <- c("ID","Index","Label","PCoA1","PCoA2")
+
+b1 <-PCoA1$values[,"Relative_eig"]
+
+pro1 = as.numeric(sprintf("%.3f",b1[1]))*100
+pro2 = as.numeric(sprintf("%.3f",b1[2]))*100
+
+xlab1=paste("PCo1(",pro1,"%)",sep="") 
+ylab1=paste("PCo2(",pro2,"%)",sep="")
+PCoA.result1$Index <- factor(PCoA.result1$Index, levels=unique(c("Donor","PreFMT","PostFMT")))
+
+p01<- ggplot(PCoA.result1, aes(PCoA1, PCoA2, group = Index, color = Index))
+p01 <- p01 + geom_point(size=3)
+#p01 <- p01 + geom_text(aes(label=Label),hjust=0, vjust=0,size=1,colour="black")
+p01 <- p01 + theme_bw()
+#geom_text(aes(label=ID),hjust=0, vjust=0,size=1.6)+
+p01 <- p01 + stat_ellipse(level = 0.95, show.legend = F,linetype = 2)
+p01 <- p01 + xlab(xlab1)+ylab(ylab1)+theme(panel.grid=element_blank())
+#scale_color_viridis(discrete = TRUE, option = "D")+
+#scale_fill_viridis(discrete = TRUE) +
+p01 <- p01 + scale_color_brewer(palette="Paired")
+p01 <- p01 + theme(legend.key.size = unit(0.3, "cm"))
+p01 <- p01 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   legend.position="none",
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                            size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                             size=6),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p01 <- p01 + theme(legend.position = c(0.1,0.1))
+#p04 <- p04 + theme(legend.position="none")
+#p01 <- p01 + ggtitle("PCOA")
+
+
+### pair-wise distance 
+ASD1<-vegdist(mat1,method="euclidean") 
+###Matrix transfer
+ASD1<-as.matrix(ASD1)
+#Half matrix 
+ASD1[lower.tri(ASD1)]=NA
+
+#data format transfer
+Species_asd<- melt(ASD1, id.var = "subject1",variable.name = "subject2", value.name = "bc")
+
+write.table(Species_asd,"CDI_MAG_asd.txt",sep="\t",col.names=NA)
+
+
+dat2 <- read_excel(path = Res1,sheet = "Pre_Post")
+comparison1 <- list(c("Donor_PostFMT", "Donor_PreFMT"))
+dat2$Label <- factor(dat2$Label, levels=unique(c("Donor_PreFMT","Donor_PostFMT")))
+
+p02 <- ggplot(data=dat2, aes(x = Label,y=ASD,fill=Label))
+p02 <- p02 + geom_violin(trim=FALSE)
+p02 <- p02 + stat_boxplot(geom ='errorbar', width = 0.15)
+p02 <- p02 + geom_boxplot(size=0.3,width=0.15,outlier.shape= NA,fill="white")
+p02 <- p02 + theme(plot.background=element_blank(),panel.background=element_blank())
+p02 <- p02 + theme_bw()
+p02 <- p02 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p02 <- p02 + scale_fill_brewer(palette = "Paired")
+p02 <- p02 + scale_color_brewer(palette = "Paired")
+p02 <- p02 + ylab("rclr distance")
+p02 <- p02 + xlab(NULL)
+p02 <- p02 + theme(legend.position="none")
+p02 <- p02 + stat_compare_means(comparisons = comparison1,label = "p.format",size=2.5,method = "wilcox.test")
+
+dat3 <- read_excel(path = Res1,sheet = "Overlap")
+dat3 <- dat3[,-3]
+dat3 <- split(dat3, dat3$ID)
+dat3[[1]]<-dat3[[1]][,-1]
+dat3[[2]]<-dat3[[2]][,-1]
+dat3[[3]]<-dat3[[3]][,-1]
+
+library(ggvenn)
+p03 <-ggvenn(dat3,fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF"),stroke_size = 0.5, set_name_size = 3)
+
+### strain loss and gain
+dat4 <- read_excel(path = Res1,sheet = "Gain")
+dat5 <- read_excel(path = Res1,sheet = "Lost")
+
+dat4<-dat4[,c(3,5,6)]
+dat5<-dat5[,c(3,5,6)]
+
+dat4<-distinct(dat4, Species, .keep_all= TRUE)
+dat5<-distinct(dat5, Species, .keep_all= TRUE)
+
+dat4<-dat4[which(dat4$Species!="Unknown"),]
+dat5<-dat5[which(dat5$Species!="Unknown"),]
+
+dat4<-dat4[c(1:30),]
+dat4<-dat4[order(dat4$Count),]
+dat5<-dat5[order(dat5$Count),]
+
+dat4$Species <- factor(dat4$Species, levels=unique(dat4$Species))
+dat5$Species <- factor(dat5$Species, levels=unique(dat5$Species))
+
+p04 <- ggplot(dat5, aes(x=Species, y=Count, fill=Phyla))
+p04 <- p04 + geom_bar(stat="identity")
+p04 <- p04 + scale_fill_brewer(palette="Paired")
+p04 <- p04 + theme(plot.background=element_blank(),panel.background=element_blank())
+p04 <- p04 + theme_bw()
+p04 <- p04 + theme(axis.text.x=element_text(colour="black",family="Arial",size=8,face="plain"), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_text(colour="black",family="Arial",size=8,face="italic"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                   axis.title.x=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                            size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.direction="vertical",
+                   plot.title = element_text(family="Arial",size = 12,face="plain"),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p04 <- p04 + theme(legend.position = c(0.7,0.4))
+p04 <- p04 + ylab("Number of nrMAGs")
+p04 <- p04 + xlab(NULL)
+#p04 <- p04 + ylim(0, 65)
+p04 <- p04 + coord_flip()
+
+
+p05 <- ggplot(dat4, aes(x=Species, y=Count, fill=Phyla))
+p05 <- p05 + geom_bar(stat="identity")
+p05 <- p05 + scale_fill_brewer(palette="Paired")
+p05 <- p05 + theme(plot.background=element_blank(),panel.background=element_blank())
+p05 <- p05 + theme_bw()
+p05 <- p05 + theme(axis.text.x=element_text(colour="black",family="Arial",size=8), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_text(colour="black",family="Arial",size=8,face="italic"),
+                   axis.title.x=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                            size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.direction="vertical",
+                   plot.title = element_text(family="Arial",size = 12,face="plain"),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p05 <- p05 + theme(legend.position = c(0.7,0.1))
+p05 <- p05 + ylab("Number of nrMAGs")
+p05 <- p05 + xlab(NULL)
+#p05 <- p05 + ylim(0, 65)
+p05 <- p05 + coord_flip()
+
+##### Strain share rate 
+
+dat5 <- read_excel(path = Res1,sheet = "Share_rate")
+df5<-dat5[,-c(1:5)]
+
+
+# Function to calculate Jaccard index between two samples
+calculate_jaccard_index <- function(sample1, sample2) {
+  # Count shared and total species
+  shared_species <- sum(sample1 & sample2)
+  total_species <- sum(sample1 | sample2)
+  
+  # Calculate Jaccard index
+  if (total_species > 0) {
+    jaccard_index <- shared_species / total_species
+  } else {
+    jaccard_index <- 0  # Set to 0 if there are no species in total
+  }
+  
+  return(jaccard_index)
+}
+
+# Calculate Jaccard index for all pairs of samples
+num_samples <- nrow(df5)
+jaccard_matrix <- matrix(0, nrow = num_samples, ncol = num_samples)
+
+for (i in 1:(num_samples - 1)) {
+  for (j in (i + 1):num_samples) {
+    sample1 <- df5[i, ]
+    sample2 <- df5[j, ]
+    
+    jaccard_index <- calculate_jaccard_index(sample1, sample2)
+    
+    # Fill the upper triangular part of the matrix (since Jaccard is symmetric)
+    jaccard_matrix[i, j] <- jaccard_index
+    jaccard_matrix[j, i] <- jaccard_index
+  }
+}
+
+# Display the Jaccard index matrix
+sim<-as.matrix(jaccard_matrix)
+#Half matrix 
+sim[lower.tri(sim)]=NA
+row.names(sim)<-dat5$ID
+colnames(sim)<-dat5$ID
+jac<- melt(sim, id.var = "subject1",variable.name = "subject2", value.name = "jac")
+
+write.table(jac,"Strains_shared_rate.txt",sep="\t")
+
+dat6 <- read_excel(path = Res1,sheet = "Share_rate_res")
+
+comparison1 <- list(c("Donor_PostFMT", "Donor_PreFMT"))
+dat6$Type <- factor(dat6$Type, levels=unique(c("Donor_PreFMT","Donor_PostFMT")))
+
+p06 <- ggplot(data=dat6, aes(x = Type,y=jac,fill=Type))
+p06 <- p06 + geom_violin(trim=FALSE)
+p06 <- p06 + stat_boxplot(geom ='errorbar', width = 0.15)
+p06 <- p06 + geom_boxplot(size=0.3,width=0.15,outlier.shape= NA,fill="white")
+p06 <- p06 + theme(plot.background=element_blank(),panel.background=element_blank())
+p06 <- p06 + theme_bw()
+p06 <- p06 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p06 <- p06 + scale_fill_brewer(palette = "Paired")
+p06 <- p06 + scale_color_brewer(palette = "Paired")
+p06 <- p06 + ylab("Strain share rate")
+p06 <- p06 + xlab(NULL)
+p06 <- p06 + theme(legend.position="none")
+p06 <- p06 + stat_compare_means(comparisons = comparison1,label = "p.format",size=2.5,method = "wilcox.test")
+
+######### differential abundance species
+dat7 <- read_excel(path = Res1,sheet = "DAA_res")
+tax <- read_excel(path = Res1,sheet = "DAA_taxonomy")
+tax <- tax[,c(1,9)]
+abund<-melt(dat7)
+
+colnames(abund)[colnames(abund) == "variable"] <- c("MAGs")
+
+
+heat<-inner_join(abund, tax, by="MAGs")
+
+heat$value<-(0.0000000001+heat$value)
+log<-log10(heat$value)
+heat<-cbind(heat,log)
+
+heat$ID <- factor(heat$ID, levels=unique(heat$ID))
+heat$MAGs <- factor(heat$MAGs, levels=unique(heat$MAGs))
+heat$Index <- factor(heat$Index, levels=unique(c("Donor","PreFMT","PostFMT")))
+
+
+p07 <- ggplot(data = heat, aes(x=ID, y=Name))
+p07 <- p07 + geom_tile(aes(fill=log),size=0.01)
+p07 <- p07 + facet_grid(~ Index, space="free_x", scales="free_x",switch="x")
+#p07 <- p07 + scale_fill_gradientn(colors = rev(brewer.pal(10, "RdYlGn")))
+p07 <- p07  + scale_fill_viridis(option = "D")
+#p07 <- p07 + scale_fill_gradient2(low = "#00007F", mid = "#7FFF7F", high = "#FF0000")
+p07 <- p07 + theme_minimal()
+p07 <- p07 + scale_x_discrete(expand = c(0, 0))
+p07 <- p07 + scale_y_discrete(expand = c(0, 0),position = "right")
+p07 <- p07 + theme(axis.text.x = element_blank(),axis.text.y=element_text(size=10,colour="black"))
+p07 <- p07 + theme(strip.text.y.left = element_text(angle = 0,size=8))
+p07 <- p07 + theme(panel.spacing.y=unit(0.15, "lines"))
+p07 <- p07 + ylab(NULL)
+p07 <- p07 + xlab(NULL)
+p07 <- p07 + theme(legend.position="none")
+
+plt1 <- plot_grid(p03,p04,labels=c('a','b'),label_size = 12,ncol=1,label_fontfamily="Arial",rel_heights=c(1,1))
+plt2 <- plot_grid(p01,p02,labels=c('d','e'),label_size = 12,ncol=1,label_fontfamily="Arial",rel_widths=c(1,1))
+plt3 <- plot_grid(p06,p03,labels=c('f','g'),label_size = 12,ncol=1,label_fontfamily="Arial",rel_heights=c(1,1))
+plt4 <- plot_grid(plt1,p05,plt2,plt3,labels=c('','c','',''),label_size = 12,ncol=4,label_fontfamily="Arial",rel_widths=c(0.8,1,0.8,0.8))
+plt5 <- plot_grid(plt4,p07,labels=c('','h'),label_size = 12,ncol=1,label_fontfamily="Arial",rel_heights=c(0.3,1))
+
+save_plot("CDI_MAG_fig3_s.pdf", plt5, base_width = 18,base_height =30)
+
+```
+
+
+
+
+
+
+
+
+
+
+######################################### Supplementary figures ##########################################
+ #### Figure S1
+```{r}          
+
+rm(list=ls())
+library(ggplot2)
+library(cowplot)
+library(RColorBrewer)
+library(readxl)
+library(cowplot)
+library(reshape2) 
+library(ggExtra)
+library(extrafont)
+setwd("/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/MAG")
+
+Res1 <- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/MAG/MAG_info.xlsx"
+dat1 <- read_excel(path = Res1,sheet = "basic")
+
+df1<-dat1[which(dat1$Cohort=="CDI"),]
+df2<-dat1[which(dat1$Cohort=="Verma"),]
+df3<-dat1[which(dat1$Cohort=="HMP"),]
+
+df1$Label <- factor(df1$Label, levels=c("CON","NCD","ASC","CDI"))
+
+p1 <- ggplot(df1, aes(x=Label, y=Ratio, fill=Label))
+p1 <- p1 + geom_bar(stat="identity")
+p1 <- p1 + scale_fill_brewer(palette="Paired")
+p1 <- p1 + theme(plot.background=element_blank(),panel.background=element_blank())
+p1 <- p1 + theme_bw()
+p1 <- p1 + theme(axis.text.x=element_text(colour="black",family="Arial",size=8), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_text(colour="black",family="Arial",size=8,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                   axis.title.x=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                            size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   plot.title = element_text(family="Arial",size = 12,face="plain"),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p1 <- p1 + theme(legend.position = "none")
+p1 <- p1 + ylab("Recover rate of nrMAGs")
+p1 <- p1 + xlab(NULL)
+p1 <- p1 + ggtitle("CDI")
+
+p2 <- ggplot(df2, aes(x=Label, y=Ratio, fill=Label))
+p2 <- p2 + geom_bar(stat="identity",width=0.7)
+p2 <- p2 + scale_fill_brewer(palette="Paired")
+p2 <- p2 + theme(plot.background=element_blank(),panel.background=element_blank())
+p2 <- p2 + theme_bw()
+p2 <- p2 + theme(axis.text.x=element_text(colour="black",family="Arial",size=8), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_text(colour="black",family="Arial",size=8,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                   axis.title.x=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   plot.title = element_text(family="Arial",size = 12,face="plain"),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                             size=6),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p2 <- p2 + theme(legend.position = "none")
+p2 <- p2 + ylab("Recover rate of nrMAGs")
+p2 <- p2 + xlab(NULL)
+p2 <- p2 + ggtitle("Verma et al.")
+
+p3 <- ggplot(df3, aes(x=Label, y=Ratio, fill=Label))
+p3 <- p3 + geom_bar(stat="identity",width=0.5)
+p3 <- p3 + scale_fill_brewer(palette="Paired")
+p3 <- p3 + theme(plot.background=element_blank(),panel.background=element_blank())
+p3 <- p3 + theme_bw()
+p3 <- p3 + theme(axis.text.x=element_text(colour="black",family="Arial",size=8), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_text(colour="black",family="Arial",size=8,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                   axis.title.x=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   plot.title = element_text(family="Arial",size = 12,face="plain"),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p3 <- p3 + theme(legend.position = "none")
+p3 <- p3 + ylab("Recover rate of nrMAGs")
+p3 <- p3 + xlab(NULL)
+p3 <- p3 + ggtitle("HMP")
+
+plot1<-plot_grid(p3, p2, p1, labels=c('a','b','c'), ncol=3)
+
+save_plot("CDI_MAG_FigS1.pdf", plot1, base_width = 6,base_height = 3)
+
+```
+
+###### Figure S2
+
+```{r}
+rm(list=ls())
+library(ggplot2)
+library(cowplot)
+library(RColorBrewer)
+library(webr)
+library(dplyr)
+library(readxl)
+library(vegan)
+library(ape)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(cowplot)
+library(reshape2) 
+library(ggExtra)
+library(extrafont)
+library(ggpubr)
+setwd("/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/MAG")
+
+Res1 <- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Data/CDI_MAG_diversity.xlsx"
+
+dat1 <- read_excel(path = Res1,sheet = "alpha")
+
+lists <- split(dat1, dat1$Index)
+dd1<-rbind(lists[[5]],lists[[6]])
+dd2<-rbind(lists[[4]],lists[[9]],lists[[8]])
+dd3<-rbind(lists[[3]],lists[[7]],lists[[1]],lists[[2]])
+
+dd1$Index <- factor(dd1$Index, levels=unique(dd1$Index))
+dd2$Index <- factor(dd2$Index, levels=unique(dd2$Index))
+dd3$Index <- factor(dd3$Index, levels=unique(dd3$Index))
+
+comparison1 <- list(c("HMP_1", "HMP_2"))
+comparison2 <- list(c("Donor", "PreFMT"),c("Donor", "PostFMT"),c("PreFMT","PostFMT"))
+comparison3 <- list(c("CON", "NCD"),c("CON", "ASC"),c("CON","CDI"),c("NCD","ASC"),c("NCD","CDI"),c("ASC","CDI"))
+
+scaleFUN1 <- function(x) sprintf("%.1f", x)
+
+#Panel a
+p01 <- ggplot(data=dd1, aes(x = Index,y=Shannon,fill=Index))
+p01 <- p01 + geom_violin(trim=FALSE)
+p01 <- p01 + stat_boxplot(geom ='errorbar', width = 0.15)
+p01 <- p01 + geom_boxplot(size=0.3,width=0.12,outlier.shape= NA,fill="white")
+p01 <- p01 + theme(plot.background=element_blank(),panel.background=element_blank())
+p01 <- p01 + theme_bw()
+p01 <- p01 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p01 <- p01 + scale_fill_brewer(palette = "Paired")
+p01 <- p01 + scale_color_brewer(palette = "Paired")
+p01 <- p01 + ylab("Shannon")
+p01 <- p01 + xlab(NULL)
+p01 <- p01 + theme(legend.position="none")
+p01 <- p01 + stat_compare_means(comparisons = comparison1,label = "p.format",size=2.5,method = "wilcox.test")
+p01 <- p01 + ggtitle("HMP")
+
+
+p02 <- ggplot(data=dd2, aes(x = Index,y=Shannon,fill=Index))
+p02 <- p02 + geom_violin(trim=FALSE)
+p02 <- p02 + stat_boxplot(geom ='errorbar', width = 0.15)
+p02 <- p02 + geom_boxplot(size=0.3,width=0.15,outlier.shape= NA,fill="white")
+p02 <- p02 + theme(plot.background=element_blank(),panel.background=element_blank())
+p02 <- p02 + theme_bw()
+p02 <- p02 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p02 <- p02 + scale_fill_brewer(palette = "Paired")
+p02 <- p02 + scale_color_brewer(palette = "Paired")
+p02 <- p02 + ylab("Shannon")
+p02 <- p02 + xlab(NULL)
+p02 <- p02 + theme(legend.position="none")
+p02 <- p02 + stat_compare_means(comparisons = comparison2,label = "p.format",size=2.5,method = "wilcox.test")
+p02 <- p02 + ggtitle("Verma et al.")
+
+p03 <- ggplot(data=dd3, aes(x = Index,y=Shannon,fill=Index))
+p03 <- p03 + geom_violin(trim=FALSE)
+p03 <- p03 + stat_boxplot(geom ='errorbar', width = 0.15)
+p03 <- p03 + geom_boxplot(size=0.3,width=0.18,outlier.shape= NA,fill="white")
+p03 <- p03 + theme(plot.background=element_blank(),panel.background=element_blank())
+p03 <- p03 + theme_bw()
+p03 <- p03 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p03 <- p03 + scale_fill_brewer(palette = "Paired")
+p03 <- p03 + scale_color_brewer(palette = "Paired")
+p03 <- p03 + ylab("Shannon")
+p03 <- p03 + xlab(NULL)
+p03 <- p03 + theme(legend.position="none")
+p03 <- p03 + stat_compare_means(comparisons = comparison3,label = "p.format",size=2.5,method = "wilcox.test")
+p03 <- p03 + ggtitle("CDI")
+
+All1 <- plot_grid(p01,p02,p03,labels=c('a','b','c'),label_size = 12,ncol=3,rel_widths = c(1,1,1),label_fontfamily="Arial")
+save_plot("CDI_MAG_figS2.pdf", All1, base_width = 8,base_height =3)
+
+
+
+```
+
+
+
+```{r}
+
+
+###Loading data from ancom res folder
+rm(list=ls())
+library(dplyr)
+setwd("/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/GMPT/HMP2")
+path<- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/GMPT/HMP2"
+filenames<-dir(path)
+filepath<-sapply(filenames, function(x){
+  paste(path,x,sep='/')})
+data<-lapply(filepath,function(x){
+  read.delim(x,header=FALSE)})
+ANCOM_res<-matrix(NA,nrow = 1,ncol = 7);
+
+for (i in 1:14){
+  df<-data[[i]]
+  df <- df[order(df[,7],decreasing=T),]
+  ANCOM_res<-rbind(ANCOM_res,df)
+}
+
+ANCOM_res<-ANCOM_res[,-c(1)]
+ANCOM_res<-ANCOM_res[-c(1),]
+
+names(ANCOM_res)<-c("Taxa","W_stat","detected_0.9","detected_0.8","detected_0.7","detected_0.6")
+ANCOM_res <- ANCOM_res[order(ANCOM_res$detected_0.6,decreasing=T),]
+ANCOM_res<-ANCOM_res[(which(ANCOM_res$detected_0.6=="TRUE")),] ### Select detected_0.6
+
+###GMPT res
+GMPT_res<-ANCOM_res[,c(1,2)]
+GMPT_res <- GMPT_res[order(GMPT_res$Taxa,decreasing=F),]
+GMPT_sum<-aggregate(W_stat~Taxa, GMPT_res, FUN = function(x) mean(as.numeric(as.character(x)))) 
+
+###Mean of frequency value
+Taxas<-table(GMPT_res$Taxa) 
+GMPT_sum<-cbind(GMPT_sum,Taxas)
+GMPT_sum<-GMPT_sum[,-3]
+GMPT_sum <- GMPT_sum[order(GMPT_sum$Freq,decreasing=T),]
+
+######### Caculate the spearman betwee Taxa and pathogen on phenotypic group
+library(microbiome)
+library(psych)
+setwd("/Users/shanlin/HMS_shanlin/Project/CDF/MPT/Final/GMPT/Demo")
+ASV <- "/Users/shanlin/HMS_shanlin/Project/CDF/MPT/Final/GMPT/Demo/GMPT_demo.xlsx"
+dat0 <- read_excel(path = ASV,sheet = "Demo")
+rel<-as.data.frame(make_relative(as.matrix(dat0[,-c(1:3)])))###relative abundance
+rel<-cbind(dat0[,c(2:3)],rel)
+
+### caculate the average abundance in different groups
+dat1<-aggregate(.~Index,data=rel, FUN = function(x) mean(as.numeric(as.character(x))))
+tmp<-NULL
+for (i in 3:length(dat1)){
+  cor.spe<-corr.test(dat1[,2],dat1[,i],method='spearman',adjust="BH")
+  cor<-as.numeric(cor.spe$r)
+  tmp<-rbind(cor,tmp)
+}
+name<-colnames(dat1[,-c(1:2)])
+Sep<-as.data.frame(cbind(name,tmp))
+names(Sep)<-c("Taxa","Sepearman")
+
+###select candidate taxa 
+overlap = intersect(GMPT_sum$Taxa, Sep$Taxa)
+Sep = Sep[match(overlap,Sep$Taxa),]
+Sep <- Sep[order(Sep$Taxa,decreasing=F),]
+GMPT_sum <- GMPT_sum[order(GMPT_sum$Taxa,decreasing=F),]
+GMPT<-cbind(GMPT_sum,Sep)
+
+###Rank based on W score and freq in all pair-wise comparison
+GMPT <- GMPT[order(GMPT$W_stat,decreasing=T),]
+GMPT <- GMPT[order(GMPT$freq,decreasing=T),]
+GMPT <- GMPT[,-4]
+
+GMPT$Sepearman <- as.numeric(GMPT$Sepearman)
+GMPT$Label <- NA #generate null column for labeling
+
+###labeling of putative casual species
+for (i in 1:nrow(GMPT)){
+  if (GMPT[i,4]>0){
+    GMPT[i,5]<-"Permissive"#"promoter"
+  } else if (GMPT[i,4]<0){
+    GMPT[i,5]<-"Protective"#"Inhibitor"
+  } else {
+    GMPT[i,5]<-"Neutral"
+  }
+}
+
+row.names(GMPT)<-c(1:nrow(GMPT)) ###Final outputs
+
+### Top20 result
+GMPT_top20<-GMPT[c(1:20),] #Top20
+
+```
+
+
+
+
+
+
+
+### strain loss and gain
+dat4 <- read_excel(path = Res1,sheet = "Gain")
+dat4<-dat4[c(1:30,575:583),]
+dat4<-dat4[order(dat4$Delta),]
+dat4$Species <- factor(dat4$Species, levels=unique(dat4$Species))
+
+p04 <- ggplot(dat4, aes(x=Species, y=Donor, fill=Phyla))
+p04 <- p04 + geom_bar(stat="identity")
+p04 <- p04 + scale_fill_brewer(palette="Paired")
+p04 <- p04 + theme(plot.background=element_blank(),panel.background=element_blank())
+p04 <- p04 + theme_bw()
+p04 <- p04 + theme(axis.text.x=element_text(colour="black",family="Arial",size=8,face="plain"), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_text(colour="black",family="Arial",size=8,face="italic"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                   axis.title.x=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                            size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.direction="horizontal",
+                   plot.title = element_text(family="Arial",size = 12,face="plain"),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p04 <- p04 + theme(legend.position = c(0.84,0.7))
+p04 <- p04 + ylab("Number of nrMAGs")
+p04 <- p04 + xlab(NULL)
+p04 <- p04 + ylim(0, 65)
+p04 <- p04 + coord_flip()
+
+
+p05 <- ggplot(dat4, aes(x=Species, y=PreFMT, fill=Phyla))
+p05 <- p05 + geom_bar(stat="identity")
+p05 <- p05 + scale_fill_brewer(palette="Paired")
+p05 <- p05 + theme(plot.background=element_blank(),panel.background=element_blank())
+p05 <- p05 + theme_bw()
+p05 <- p05 + theme(axis.text.x=element_text(colour="black",family="Arial",size=8), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_blank(),
+                   axis.title.x=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                            size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.direction="horizontal",
+                   plot.title = element_text(family="Arial",size = 12,face="plain"),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p05 <- p05 + theme(legend.position = "none")
+p05 <- p05 + ylab("Number of nrMAGs")
+p05 <- p05 + xlab(NULL)
+p05 <- p05 + ylim(0, 65)
+p05 <- p05 + coord_flip()
+
+p06 <- ggplot(dat4, aes(x=Species, y=PostFMT, fill=Phyla))
+p06 <- p06 + geom_bar(stat="identity")
+p06 <- p06 + scale_fill_brewer(palette="Paired")
+p06 <- p06 + theme(plot.background=element_blank(),panel.background=element_blank())
+p06 <- p06 + theme_bw()
+p06 <- p06 + theme(axis.text.x=element_text(colour="black",family="Arial",size=8), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                   axis.text.y=element_blank(), 
+                   axis.title.x=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   axis.title.y=element_text(family="Arial",size = 10,face="plain"), #设置y轴标题的字体属性
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                   legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                            size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.direction="horizontal",
+                   plot.title = element_text(family="Arial",size = 12,face="plain"),
+                   panel.grid.major = element_blank(),   #不显示网格线
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5))
+p06 <- p06 + theme(legend.position = "none")
+p06 <- p06 + ylab("Number of nrMAGs")
+p06 <- p06 + xlab(NULL)
+p06 <- p06 + ylim(0, 65)
+p06 <- p06 + coord_flip()
+
+
+
+
+
+
+```{r}
+#################################################### revision ##############################################################
+
+rm(list=ls())
+library(ggplot2)
+library(cowplot)
+library(RColorBrewer)
+library(webr)
+library(dplyr)
+library(readxl)
+library(vegan)
+library(ape)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(cowplot)
+library(reshape2) 
+library(ggExtra)
+library(extrafont)
+library(ggpubr)
+setwd("/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Analysis/MAG")
+
+Res1 <- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Data/CDI_MAG_info.xlsx"
+dat1 <- read_excel(path = Res1,sheet = "basic")
+
+######################################## quality ###########
+dat2 <- read_excel(path = Res1,sheet = "quality")
+dat2$Phyla <- factor(dat2$Phyla, levels=unique(dat2$Phyla))
+scaleFUN1 <- function(x) sprintf("%.2f", x)
+
+Res2 <- "/Users/shanlin/HMS_shanlin/Project/CDF/MAG/Final/Data/CDI_MAG_diversity.xlsx"
+dat3 <- read_excel(path = Res2,sheet = "richness")
+dat4 <- read_excel(path = Res2,sheet = "alpha")
+dat5 <- read_excel(path = Res2,sheet = "Abundance")
+
+dat3<-dat3[c(1:40),]
+dat3$Species <- factor(dat3$Species, levels=unique(dat3$Species))
+dat3$Phyla <- factor(dat3$Phyla, levels=unique(dat3$Phyla))
+
+
+lists <- split(dat4, dat4$Index)
+dd1<-rbind(lists[[5]],lists[[6]])
+dd2<-rbind(lists[[4]],lists[[9]],lists[[8]])
+dd3<-rbind(lists[[3]],lists[[7]],lists[[1]],lists[[2]])
+
+dd1$Index <- factor(dd1$Index, levels=unique(dd1$Index))
+dd2$Index <- factor(dd2$Index, levels=unique(dd2$Index))
+dd3$Index <- factor(dd3$Index, levels=unique(dd3$Index))
+
+
+############## select CDI samples
+cdi<- dd3[dd3$Index == "CDI", ]
+set.seed(123)  # For reproducibility
+cdi1 <- cdi[sample(nrow(cdi), size = 14), ]
+cdi2 <- cdi[sample(nrow(cdi), size = 17), ]
+cdi3 <- cdi[sample(nrow(cdi), size = 26), ]
+
+other_groups <- dd3[dd3$Index != "CDI", ]
+
+df1<-dd3
+df2 <- rbind(cdi1, other_groups)
+df3 <- rbind(cdi2, other_groups)
+df4 <- rbind(cdi3, other_groups)
+
+comparison <- list(c("CON", "NCD"),c("CON", "ASC"),c("CON","CDI"),c("NCD","ASC"),c("NCD","CDI"),c("ASC","CDI"))
+
+scaleFUN1 <- function(x) sprintf("%.1f", x)
+
+#Panel a
+p01 <- ggplot(data=df1, aes(x = Index,y=S,fill=Index))
+p01 <- p01 + geom_violin(trim=FALSE)
+p01 <- p01 + stat_boxplot(geom ='errorbar', width = 0.15)
+p01 <- p01 + geom_boxplot(size=0.3,width=0.12,outlier.shape= NA,fill="white")
+p01 <- p01 + theme(plot.background=element_blank(),panel.background=element_blank())
+p01 <- p01 + theme_bw()
+p01 <- p01 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p01 <- p01 + scale_fill_brewer(palette = "Paired")
+p01 <- p01 + scale_color_brewer(palette = "Paired")
+p01 <- p01 + ylab("Number of nrMAGs")
+p01 <- p01 + xlab(NULL)
+p01 <- p01 + theme(legend.position="none")
+p01 <- p01 + stat_compare_means(comparisons = comparison,label = "p.format",size=2.5,method = "wilcox.test")
+p01 <- p01 + ggtitle("CDI_full")
+
+
+p02 <- ggplot(data=df2, aes(x = Index,y=S,fill=Index))
+p02 <- p02 + geom_violin(trim=FALSE)
+p02 <- p02 + stat_boxplot(geom ='errorbar', width = 0.15)
+p02 <- p02 + geom_boxplot(size=0.3,width=0.15,outlier.shape= NA,fill="white")
+p02 <- p02 + theme(plot.background=element_blank(),panel.background=element_blank())
+p02 <- p02 + theme_bw()
+p02 <- p02 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p02 <- p02 + scale_fill_brewer(palette = "Paired")
+p02 <- p02 + scale_color_brewer(palette = "Paired")
+p02 <- p02 + ylab("Number of nrMAGs")
+p02 <- p02 + xlab(NULL)
+p02 <- p02 + theme(legend.position="none")
+p02 <- p02 + stat_compare_means(comparisons = comparison,label = "p.format",size=2.5,method = "wilcox.test")
+p02 <- p02 + ggtitle("CDI(n=14)")
+
+p03 <- ggplot(data=df3, aes(x = Index,y=S,fill=Index))
+p03 <- p03 + geom_violin(trim=FALSE)
+p03 <- p03 + stat_boxplot(geom ='errorbar', width = 0.15)
+p03 <- p03 + geom_boxplot(size=0.3,width=0.18,outlier.shape= NA,fill="white")
+p03 <- p03 + theme(plot.background=element_blank(),panel.background=element_blank())
+p03 <- p03 + theme_bw()
+p03 <- p03 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p03 <- p03 + scale_fill_brewer(palette = "Paired")
+p03 <- p03 + scale_color_brewer(palette = "Paired")
+p03 <- p03 + ylab("Number of nrMAGs")
+p03 <- p03 + xlab(NULL)
+p03 <- p03 + theme(legend.position="none")
+p03 <- p03 + stat_compare_means(comparisons = comparison,label = "p.format",size=2.5,method = "wilcox.test")
+p03 <- p03 + ggtitle("CDI(n=17)")
+
+p04 <- ggplot(data=df1, aes(x = Index,y=S,fill=Index))
+p04 <- p04 + geom_violin(trim=FALSE)
+p04 <- p04 + stat_boxplot(geom ='errorbar', width = 0.15)
+p04 <- p04 + geom_boxplot(size=0.3,width=0.12,outlier.shape= NA,fill="white")
+p04 <- p04 + theme(plot.background=element_blank(),panel.background=element_blank())
+p04 <- p04 + theme_bw()
+p04 <- p04 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10),
+                   axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"),
+                   axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                   axis.title.x=element_text(family="Arial",size = 12,face="plain"), 
+                   panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3),
+                   legend.text=element_text(face="italic", family="Arial", colour="black", size=6),
+                   legend.title=element_text(face="italic", family="Arial", colour="black", size=6),
+                   panel.grid.major = element_blank(), 
+                   panel.grid.minor = element_blank(),
+                   panel.background = element_rect(colour = "black", size = 0.5),
+                   plot.title=element_text(size=12))
+p04 <- p04 + scale_fill_brewer(palette = "Paired")
+p04 <- p04 + scale_color_brewer(palette = "Paired")
+p04 <- p04 + ylab("Number of nrMAGs")
+p04 <- p04 + xlab(NULL)
+p04 <- p04 + theme(legend.position="none")
+p04 <- p04 + stat_compare_means(comparisons = comparison,label = "p.format",size=2.5,method = "wilcox.test")
+p04 <- p04 + ggtitle("CDI(n=26)")
+
+
+######PCOA
+list2 <- split(dat5, dat5$Index)
+
+tax1<-rbind(list2[[5]],list2[[6]])
+tax2<-rbind(list2[[4]],list2[[9]],list2[[8]])
+tax3<-rbind(list2[[3]],list2[[7]],list2[[1]],list2[[2]])
+
+tax1$Index <- factor(tax1$Index, levels=unique(tax1$Index))
+tax2$Index <- factor(tax2$Index, levels=unique(tax2$Index))
+tax3$Index <- factor(tax3$Index, levels=unique(tax3$Index))
+
+
+cdi<- tax3[tax3$Index == "CDI", ]
+set.seed(123)  # For reproducibility
+cdi1 <- cdi[sample(nrow(cdi), size = 14), ]
+cdi2 <- cdi[sample(nrow(cdi), size = 17), ]
+cdi3 <- cdi[sample(nrow(cdi), size = 26), ]
+
+other_groups <- tax3[tax3$Index != "CDI", ]
+
+dt1<-tax3 #full cdi
+dt2<-rbind(cdi1, other_groups)
+dt3<-rbind(cdi2, other_groups)
+dt4<-rbind(cdi3, other_groups)
+
+dff1<-dt1[,-c(1:2)]
+dff2<-dt2[,-c(1:2)]
+dff3<-dt3[,-c(1:2)]
+dff4<-dt4[,-c(1:2)]
+
+mat1 <- decostand(dff1, "rclr")
+mat2 <- decostand(dff2, "rclr")
+mat3 <- decostand(dff3, "rclr")
+mat4 <- decostand(dff4, "rclr")
+
+#AD
+Aitchison1<-vegdist(mat1,method="euclidean") 
+Aitchison2<-vegdist(mat2,method="euclidean") 
+Aitchison3<-vegdist(mat3,method="euclidean") 
+Aitchison4<-vegdist(mat4,method="euclidean") 
+
+matrix1<-as.matrix(Aitchison1)
+matrix2<-as.matrix(Aitchison2)
+matrix3<-as.matrix(Aitchison3)
+matrix4<-as.matrix(Aitchison4)
+
+dis1 <-as.dist(matrix1)
+dis2 <-as.dist(matrix2)
+dis3 <-as.dist(matrix3)
+dis4 <-as.dist(matrix4)
+#species
+set.seed(123)
+permanova <- adonis( dis1~ Index,
+                     data = dt1, permutations=9999)
+summary(permanova)
+permanova$aov.tab 
+
+
+#pathway
+set.seed(123)
+permanova <- adonis( dis2~ Index,
+                     data = dt2, permutations=9999)
+summary(permanova)
+permanova$aov.tab 
+
+set.seed(123)
+permanova <- adonis( dis3~ Index,
+                     data = dt3, permutations=9999)
+summary(permanova)
+permanova$aov.tab 
+
+set.seed(123)
+permanova <- adonis( dis4~ Index,
+                     data = dt4, permutations=9999)
+summary(permanova)
+permanova$aov.tab 
+
+
+PCoA1 <- pcoa(Aitchison1,correction = "none",rn=NULL)#
+PCoA2 <- pcoa(Aitchison2,correction = "none",rn=NULL)#
+PCoA3 <- pcoa(Aitchison3,correction = "none",rn=NULL)#
+PCoA4 <- pcoa(Aitchison4,correction = "none",rn=NULL)#
+
+pc1 = as.data.frame(PCoA1$vectors)
+pc2 = as.data.frame(PCoA2$vectors)
+pc3 = as.data.frame(PCoA3$vectors)
+pc4 = as.data.frame(PCoA4$vectors)
+
+PCoA.result1 <- cbind(dt1[,c(1,2)],pc1[,c(1,2)])
+PCoA.result2 <- cbind(dt2[,c(1,2)],pc2[,c(1,2)])
+PCoA.result3 <- cbind(dt3[,c(1,2)],pc3[,c(1,2)])
+PCoA.result4 <- cbind(dt4[,c(1,2)],pc4[,c(1,2)])
+
+names(PCoA.result1) <- c("ID","Index","PCo1","PCo2")
+names(PCoA.result2) <- c("ID","Index","PCo1","PCo2")
+names(PCoA.result3) <- c("ID","Index","PCo1","PCo2")
+names(PCoA.result4) <- c("ID","Index","PCo1","PCo2")
+
+b1 <-PCoA1$values[,"Relative_eig"]
+b2 <-PCoA2$values[,"Relative_eig"]
+b3 <-PCoA3$values[,"Relative_eig"]
+b4 <-PCoA4$values[,"Relative_eig"]
+
+pro11 = as.numeric(sprintf("%.3f",b1[1]))*100
+pro12 = as.numeric(sprintf("%.3f",b1[2]))*100
+pro21 = as.numeric(sprintf("%.3f",b2[1]))*100
+pro22 = as.numeric(sprintf("%.3f",b2[2]))*100
+pro31 = as.numeric(sprintf("%.3f",b3[1]))*100
+pro32 = as.numeric(sprintf("%.3f",b3[2]))*100
+pro41 = as.numeric(sprintf("%.3f",b4[1]))*100
+pro42 = as.numeric(sprintf("%.3f",b4[2]))*100
+
+xlab1=paste("PCo1(",pro11,"%)",sep="") 
+ylab1=paste("PCo2(",pro12,"%)",sep="")
+xlab2=paste("PCo1(",pro21,"%)",sep="") 
+ylab2=paste("PCo2(",pro22,"%)",sep="")
+xlab3=paste("PCo1(",pro31,"%)",sep="") 
+ylab3=paste("PCo2(",pro32,"%)",sep="")
+xlab4=paste("PCo1(",pro41,"%)",sep="") 
+ylab4=paste("PCo2(",pro42,"%)",sep="")
+
+PCoA.result1$Index <- factor(PCoA.result1$Index, levels=unique(c("CON","NCD","ASC","CDI")))
+PCoA.result2$Index <- factor(PCoA.result2$Index, levels=unique(c("CON","NCD","ASC","CDI")))
+PCoA.result3$Index <- factor(PCoA.result3$Index, levels=unique(c("CON","NCD","ASC","CDI")))
+PCoA.result4$Index <- factor(PCoA.result4$Index, levels=unique(c("CON","NCD","ASC","CDI")))
+
+
+p05<- ggplot(PCoA.result1, aes(PCo1, PCo2, group = Index, color = Index))
+p05 <- p05 + geom_point(size=1.4)
+p05 <- p05 + theme_bw()
+p05 <- p05 + xlab(xlab2)+ylab(ylab2)+theme(panel.grid=element_blank())
+p05 <- p05 + scale_color_brewer(palette="Paired")
+p05 <- p05 + theme(legend.key.size = unit(0.3, "cm"))
+p05 <- p05 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"),
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                 legend.position="none",
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5),
+                 plot.title=element_text(size=12))
+p05 <- p05 + theme(legend.position = c(0.89,0.15),legend.box.background = element_rect(color="black", size=0.5))
+p05 <- p05 + annotate("text", x=-5, y=30, label= "R2=0.045; p_value=0.0001")
+
+
+p06<- ggplot(PCoA.result2, aes(PCo1, PCo2, group = Index, color = Index))
+p06 <- p06 + geom_point(size=1.4)
+p06 <- p06 + theme_bw()
+p06 <- p06 + xlab(xlab3)+ylab(ylab3)+theme(panel.grid=element_blank())
+p06 <- p06 + scale_color_brewer(palette="Paired")
+p06 <- p06 + theme(legend.key.size = unit(0.3, "cm"))
+p06 <- p06 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"),
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                 legend.position="none",
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5),
+                 plot.title=element_text(size=12))
+p06 <- p06 + theme(legend.position = c(0.89,0.15),legend.box.background = element_rect(color="black", size=0.5))
+p06 <- p06 + annotate("text", x=5, y=30, label= "R2=0.056; p_value=0.0001")
+
+p07<- ggplot(PCoA.result3, aes(PCo1, PCo2, group = Index, color = Index))
+p07 <- p07 + geom_point(size=1.4)
+p07 <- p07 + theme_bw()
+p07 <- p07 + xlab(xlab1)+ylab(ylab1)+theme(panel.grid=element_blank())
+p07 <- p07 + scale_color_brewer(palette="Paired")
+p07 <- p07 + theme(legend.key.size = unit(0.3, "cm"))
+p07 <- p07 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"),
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                 legend.position="none",
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5),
+                 plot.title=element_text(size=12))
+p07 <- p07 + theme(legend.position = c(0.89,0.15),legend.box.background = element_rect(color="black", size=0.5))
+p07 <- p07 + annotate("text", x=-5, y=20, label= "R2=0.518; p_value=0.0001")
+
+
+p08<- ggplot(PCoA.result4, aes(PCo1, PCo2, group = Index, color = Index))
+p08 <- p08 + geom_point(size=1.4)
+p08 <- p08 + theme_bw()
+p08 <- p08 + xlab(xlab1)+ylab(ylab1)+theme(panel.grid=element_blank())
+p08 <- p08 + scale_color_brewer(palette="Paired")
+p08 <- p08 + theme(legend.key.size = unit(0.3, "cm"))
+p08 <- p08 + theme(axis.text.x=element_text(colour="black",family="Arial",size=10), #设置x轴刻度标签的字体显示倾斜角度为15度，并向下调整1(hjust = 1)，字体簇为Arial大小为20
+                 axis.text.y=element_text(colour="black",family="Arial",size=10,face="plain"), #设置y轴刻度标签的字体簇，字体大小，字体样式为plain
+                 axis.title.x=element_text(family="Arial",size = 12,face="plain"),
+                 axis.title.y=element_text(family="Arial",size = 12,face="plain"),
+                 legend.position="none",
+                 panel.border = element_blank(),axis.line = element_line(colour = "black",size=0.3), #去除默认填充的灰色，并将x=0轴和y=0轴加粗显示(size=1)
+                 legend.text=element_text(face="italic", family="Arial", colour="black",  #设置图例的子标题的字体属性
+                                          size=6),
+                 legend.title=element_text(face="italic", family="Arial", colour="black", #设置图例的总标题的字体属性
+                                           size=6),
+                 panel.grid.major = element_blank(),   #不显示网格线
+                 panel.grid.minor = element_blank(),
+                 panel.background = element_rect(colour = "black", size = 0.5),
+                 plot.title=element_text(size=12))
+p08 <- p08 + theme(legend.position = c(0.89,0.15),legend.box.background = element_rect(color="black", size=0.5))
+p08 <- p08 + annotate("text", x=5, y=20, label= "R2=0.049; p_value=0.0001")
+
+All1 <- plot_grid(p01,p02,p03,p04,labels=c('a','b','c','d'),label_size = 12,ncol=4,label_fontfamily="Arial")
+All2 <- plot_grid(p05,p06,p07,p08,labels=c('e','f','g','h'),label_size = 12,ncol=4,label_fontfamily="Arial")
+
+All3 <- plot_grid(All1,All2,labels=c(' '),label_size = 12,ncol=1)
+
+save_plot("CDI_revision_fig1.pdf", All3, base_width = 18,base_height =8)
+
+```
+
